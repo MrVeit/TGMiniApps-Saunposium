@@ -1,154 +1,122 @@
 <!DOCTYPE html>
 <html lang="en-us">
-
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <title>Unity WebGL Player | Saunposium</title>
-  <style>
-    @font-face 
-    {
-      font-family: 'MyCustomFont';
-      src: url('Fonts/Tobi-Black.ttf') format('truetype');
-      font-weight: normal;
-      font-style: normal;
-    }
-
-    body,
-    html 
-    {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: #000;
-    }
-
-    #unity-container,
-    #loading-screen 
-    {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-    }
-
-    #unity-container 
-    {
-      display: none;
-    }
-
-    #loading-screen 
-    {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: #000;
-      color: white;
-      font-size: 30px;
-      font-family: 'MyCustomFont', sans-serif;
-      flex-direction: column;
-    }
-
-    .spinner 
-    {
-      border: 16px solid #f3f3f3;
-      border-top: 16px solid #3498db;
-      border-radius: 50%;
-      width: 120px;
-      height: 120px;
-      animation: spin 2s linear infinite;
-    }
-
-    .loading-text 
-    {
-      margin-top: 35px;
-      text-align: center; 
-      width: 100%;
-    }
-
-    @keyframes spin 
-    {
-      0% 
-      {
-        transform: rotate(0deg);
-      }
-
-      100% 
-      {
-        transform: rotate(360deg);
-      }
-    }
-  </style>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-</head>
-
-<body>
-  <div id="loading-screen">
-    <div class="spinner"></div>
-    <div class="loading-text">Game is loading,<br>please wait...</div>
-  </div>
-  <div id="unity-container">
-    <canvas id="unity-canvas" width=1080 height=1920 style="width: 100%; height: 100%; background: #000000"></canvas>
-  </div>
-  <script src="Build/TGMiniApps-Saunposium.loader.js"></script>
-  <script>
-    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) 
-    {
-      var meta = document.createElement('meta');
-      meta.name = 'viewport';
-      meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-      document.getElementsByTagName('head')[0].appendChild(meta);
-
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Unity WebGL Player | Saunposium</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+    <script src="TemplateData/socket.io.js"></script>
+    <script src="https://c0f4f41c-2f55-4863-921b-sdk-docs.github.io/cdn/metamask-sdk-unity.js"></script>
+  </head>
+  <body>
+    <div id="unity-container" class="unity-desktop">
+      <canvas id="unity-canvas" width=1080 height=1920></canvas>
+      <div id="unity-loading-bar">
+        <div id="unity-logo"></div>
+        <div id="unity-progress-bar-empty">
+          <div id="unity-progress-bar-full"></div>
+        </div>
+      </div>
+      <div id="unity-warning"> </div>
+      <div id="unity-footer">
+        <div id="unity-webgl-logo"></div>
+        <div id="unity-fullscreen-button"></div>
+        <div id="unity-build-title">Saunposium</div>
+      </div>
+    </div>
+    <script>
+      var container = document.querySelector("#unity-container");
       var canvas = document.querySelector("#unity-canvas");
-      canvas.style.width = "100%";
-      canvas.style.height = "100%";
-      canvas.style.position = "fixed";
+      var loadingBar = document.querySelector("#unity-loading-bar");
+      var progressBarFull = document.querySelector("#unity-progress-bar-full");
+      var fullscreenButton = document.querySelector("#unity-fullscreen-button");
+      var warningBanner = document.querySelector("#unity-warning");
 
-      document.body.style.textAlign = "left";
-    }
+      // Shows a temporary message banner/ribbon for a few seconds, or
+      // a permanent error message on top of the canvas if type=='error'.
+      // If type=='warning', a yellow highlight color is used.
+      // Modify or remove this function to customize the visually presented
+      // way that non-critical warnings and error messages are presented to the
+      // user.
+      function unityShowBanner(msg, type) {
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+        }
+        var div = document.createElement('div');
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
+        }
+        updateBannerVisibility();
+      }
 
-    function onUnityLoaded() 
-    {
-      document.getElementById('loading-screen').style.display = 'none';
-      document.getElementById('unity-container').style.display = 'block';
-
-      console.log("Unity instance successfully loaded");
-    }
-
-    createUnityInstance(document.querySelector("#unity-canvas"), 
-    {
-        dataUrl: "Build/TGMiniApps-Saunposium.data.unityweb",
-        frameworkUrl: "Build/TGMiniApps-Saunposium.framework.js.unityweb",
-        codeUrl: "Build/TGMiniApps-Saunposium.wasm.unityweb",
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/TGMiniApps-Saunposium.loader.js";
+      var config = {
+        dataUrl: buildUrl + "/TGMiniApps-Saunposium.data.unityweb",
+        frameworkUrl: buildUrl + "/TGMiniApps-Saunposium.framework.js.unityweb",
+        codeUrl: buildUrl + "/TGMiniApps-Saunposium.wasm.unityweb",
         streamingAssetsUrl: "StreamingAssets",
         companyName: "Logarithm.Games",
         productName: "Saunposium",
         productVersion: "1.3.5",
-        // matchWebGLToCanvasSize: false, // Uncomment this to separately control WebGL canvas render size and DOM element size.
-        // devicePixelRatio: 1, // Uncomment this to override low DPI rendering on high DPI displays.
-      }).then((unityInstance) => 
-      {
-        onUnityLoaded();
-      }).catch((error) => 
-      {
-        console.error('Error loading Unity instance:', error);
-      });
+        showBanner: unityShowBanner,
+      };
 
-    // Initialize Web App
-    window.addEventListener('load', function () 
-    {
-      Telegram.WebApp.ready();
+      // By default Unity keeps WebGL canvas render target size matched with
+      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
+      // Set this to false if you want to decouple this synchronization from
+      // happening inside the engine, and you would instead like to size up
+      // the canvas DOM size and WebGL render target sizes yourself.
+      // config.matchWebGLToCanvasSize = false;
 
-      Telegram.WebApp.expand();
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        // Mobile device style: fill the whole browser client area with the game canvas:
 
-      console.log("Telegram web app has been expanded to full screen");
-    });
-  </script>
-</body>
+        var meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        document.getElementsByTagName('head')[0].appendChild(meta);
+        container.className = "unity-mobile";
+        canvas.className = "unity-mobile";
 
+        // To lower canvas resolution on mobile devices to gain some
+        // performance, uncomment the following line:
+        // config.devicePixelRatio = 1;
+
+        unityShowBanner('WebGL builds are not supported on mobile devices.');
+      } else {
+        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
+
+        canvas.style.width = "1080px";
+        canvas.style.height = "1920px";
+      }
+
+      loadingBar.style.display = "block";
+
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = () => {
+        createUnityInstance(canvas, config, (progress) => {
+          progressBarFull.style.width = 100 * progress + "%";
+        }).then((unityInstance) => {
+          loadingBar.style.display = "none";
+          fullscreenButton.onclick = () => {
+            unityInstance.SetFullscreen(1);
+          };
+          window.unityInstance = unityInstance;
+        }).catch((message) => {
+          alert(message);
+        });
+      };
+      document.body.appendChild(script);
+    </script>
+  </body>
 </html>
