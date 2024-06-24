@@ -37,13 +37,13 @@ jobs:
           npm run build # Если у вас есть команда для сборки проекта
 
       - name: Copy dAppConnect.json to build directory
-      run: cp dAppConnect.json build/
+        run: cp dAppConnect.json build/
 
       - name: List build directory contents
         run: ls -la build
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           path: './build'
 
