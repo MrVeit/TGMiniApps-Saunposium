@@ -37,7 +37,7 @@ jobs:
           npm run build # Если у вас есть команда для сборки проекта
 
       - name: Copy dAppConnect.json to build directory
-        run: cp path/to/your/dAppConnect.json build/
+      run: cp dAppConnect.json build/
 
       - name: List build directory contents
         run: ls -la build
