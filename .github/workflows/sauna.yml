@@ -32,7 +32,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Copy data.json to build directory
+      - name: Copy aAppConnect.json to build directory
         run: cp path/to/your/dAppConnect.json build/
 
       - name: Setup Pages
