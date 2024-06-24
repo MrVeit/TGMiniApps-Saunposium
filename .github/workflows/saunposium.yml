@@ -32,8 +32,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Add step for building the Unity project (if necessary)
+      # - name: Build project
+      #   run: |
+      #     # Commands for building the project
+
+      - name: Create build directory
+        run: mkdir -p build
+
       - name: Copy dAppConnect.json to build directory
-        run: cp path/to/your/dAppConnect.json build/
+        run: cp dAppConnect.json build/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
